@@ -1,7 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.ORM_models import EventIncomingORM
-from src.models import EventRequest, EventCreateSchema
+from src.models import EventRequest
 
 
 from sqlalchemy.ext.asyncio import AsyncSession

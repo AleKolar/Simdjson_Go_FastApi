@@ -2,7 +2,7 @@ import asyncio
 import json
 from datetime import datetime
 from ctypes import cdll, c_char_p
-from aioredis import Redis
+from redis.asyncio import Redis
 import aio_pika
 from src.config import settings
 from src.database import get_db
