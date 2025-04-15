@@ -1,20 +1,41 @@
+import json
+from datetime import datetime
+from typing import Any, Dict, Optional
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, String, DateTime, JSON, Integer, Index
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-
-class Event(Base):
+class EventIncoming(Base):
     __tablename__ = "events"
 
-    id = Column(Integer, primary_key=True)
-    event_hash = Column(String(64), unique=True, nullable=False)
-    event_name = Column(String(100), index=True)  # Для фильтрации по имени
-    event_datetime = Column(DateTime, index=True)  # Для временных диапазонов
-    profile_id = Column(String(50), index=True)  # Основной идентификатор
-    device_ip = Column(String(15))  # Доп. идентификатор
-    raw_data = Column(JSON)  # Все исходные данные
-    created_at = Column(DateTime)  # Время обработки
+    id: [int]
+    event_hash: [int]
+    event_name: [str] = Index
+    event_datetime = []
+    profile_id: [int]
+    device_ip: [int] = Index
+    raw_data: [json]
+    created_at: [DateTime]
+
+class SchemaEventIncoming(EventIncoming):
+    model_config = ConfigDict(from_attributes=True)
 
 
-Index("idx_main_analytics", "event_name", "event_datetime", "profile_id")
+# Схема для событий
+class EventRequest(BaseModel):
+    platform: Optional[str] = None
+    event_name: Optional[str] = None
+    event_datetime: Optional[datetime] = None
+    profile_id: Optional[str] = None
+    device_ip: Optional[str] = None
+    raw_data: Optional[Dict[str, Any]] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
+
+# Схема для извлечения данных
+class SchemaEventRequest(EventIncoming):
+    model_config = ConfigDict(from_attributes=True)

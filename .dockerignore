@@ -1,0 +1,13 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+myvenv
+venv
+.DS_Store
+.env
+locustfile.py
+go/

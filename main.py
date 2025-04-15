@@ -1,18 +1,72 @@
 import os
-import sys
-from datetime import datetime
+import json
 import uvicorn
+from datetime import datetime
 from fastapi import FastAPI, Query, Depends
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.database import get_db
+from sqlalchemy import select, func, Column, Integer, String, DateTime, JSON
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import Mapped, mapped_column
+import aio_pika
+from contextlib import asynccontextmanager
+from pydantic import BaseModel
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 
-from src.models import Event
+
+# Схема для событий
+class EventRequest(BaseModel):
+    platform: str
+    event_name: str
+    profile_id: str
+    device_ip: str
+    event_datetime: datetime
+    raw_data: dict
+
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/mydatabase")
+
+
+# Функция для создания базы данных
+async def get_db() -> AsyncSession:
+    engine = create_async_engine(DATABASE_URL, echo=True)
+    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    async with async_session() as session:
+        yield session
+
+    # Основное приложение
+
 
 app = FastAPI()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Подключение к RabbitMQ
+    rabbitmq_url = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq/")
+    rabbit_connection = await aio_pika.connect_robust(rabbitmq_url)
+    rabbit_channel = await rabbit_connection.channel()
+
+    yield  # Приложение работает
+
+    # Закрытие соединений при завершении
+    await rabbit_connection.close()
+
+
+app.lifespan(lifespan)
+
+
+@app.post("/events")
+async def create_event(event_request: EventRequest):
+    data = event_request.dict()
+    json_data = json.dumps(data).encode()
+
+    # Отправка данных в очередь RabbitMQ
+    await app.state.rabbit_channel.default_exchange.publish(
+        aio_pika.Message(body=json_data),
+        routing_key="events"
+    )
+    return {"status": "event queued"}
 
 
 @app.get("/analytics/events")

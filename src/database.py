@@ -10,13 +10,13 @@ from src.config import settings
 DATABASE_URL = settings.get_db_url()
 
 engine = create_async_engine(DATABASE_URL)
-AsyncSessionLocal = async_sessionmaker(
+new_session = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False
 )
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionLocal() as session:
+    async with new_session() as session:
         yield session
 
